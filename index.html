@@ -120,28 +120,12 @@
     margin-left: -.04em;
   }
   .hero h1 .dot { color: var(--accent); }
-  .hero-bottom {
-    display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(1.5rem, 5vw, 5rem);
-    border-top: 1px solid var(--ink); padding-top: 20px;
-  }
-  .hero-bottom .label { padding-top: .5rem; }
-  .hero-bottom p { font-size: clamp(1.35rem, 2.6vw, 2rem); font-weight: 500; letter-spacing: -.025em; line-height: 1.25; }
-
-  /* ---------- Resumen en números ---------- */
-  .numeros {
-    display: grid; grid-template-columns: repeat(3, 1fr); margin-top: clamp(2.5rem, 6vw, 4rem);
-    border-top: 1px solid var(--line);
-  }
-  .num { padding: 22px 20px 24px 0; border-bottom: 1px solid var(--line); }
-  .num + .num { padding-left: 20px; }
-  .num:nth-child(3n + 1) { padding-left: 0; }
-  .num:not(:nth-child(3n)) { border-right: 1px solid var(--line); }
-  .num strong {
-    display: block; font-size: clamp(2rem, 4.5vw, 3.4rem); font-weight: 700; letter-spacing: -.045em; line-height: 1;
-    font-variant-numeric: tabular-nums;
-  }
-  .num.destacado strong { color: var(--accent); }
-  .num .label { display: block; margin-top: 10px; line-height: 1.4; }
+  .hero h1.largo { font-size: clamp(2.8rem, 8.5vw, 7rem); max-width: 13ch; line-height: .92; }
+  .hero-bottom { display: grid; grid-template-columns: 1fr auto; gap: 2rem; align-items: end; border-top: 1px solid var(--ink); padding-top: 20px; }
+  .hero-bottom p { font-size: clamp(1.1rem, 2.2vw, 1.5rem); max-width: 30ch; font-weight: 500; letter-spacing: -.01em; }
+  .stat { text-align: right; }
+  .stat .label { display: block; margin-top: 6px; }
+  .stat strong { display: block; font-size: clamp(1.6rem, 3.5vw, 2.6rem); font-weight: 700; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums; }
 
   /* ---------- Mapa: línea de tiempo de la portada ---------- */
   .mapa { margin: clamp(2.5rem, 6vw, 4rem) 0 clamp(3rem, 8vw, 6rem); }
@@ -275,10 +259,8 @@
   @media (max-width: 760px) {
     .hito { grid-template-columns: 1fr; gap: 1rem; }
     .hito .sticky { position: static; }
-    .hero-bottom { grid-template-columns: 1fr; gap: .8rem; }
-    .numeros { grid-template-columns: repeat(2, 1fr); }
-    .numeros .num { padding: 18px 14px 20px 0; border-right: 0; }
-    .num:nth-child(2n) { padding-left: 14px; border-left: 1px solid var(--line); }
+    .hero-bottom { grid-template-columns: 1fr; }
+    .stat { text-align: left; }
     .lb-prev, .lb-next { display: none; }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -320,10 +302,9 @@
   <h1 id="titulo"></h1>
   <div>
     <div class="hero-bottom">
-      <span class="label">El resumen</span>
-      <p id="resumen"></p>
+      <p id="subtitulo"></p>
+      <div class="stat"><strong id="dias">+0</strong><span class="label">días desde que nos conocimos</span></div>
     </div>
-    <div class="numeros" id="numeros"></div>
     <nav class="mapa" id="mapaNav" aria-label="Línea de tiempo"><span class="label desliza">Desliza <span>→</span></span><ol id="mapa"></ol></nav>
   </div>
 </header>
@@ -457,28 +438,17 @@
   function start(H, usuario) {
     document.title = H.nombrePagina || H.titulo;
     $("nombres").textContent = usuario ? `Hola, ${usuario}` : H.nombres;
-    $("titulo").innerHTML = esc(H.titulo) + '<span class="dot">.</span>';
-    $("resumen").textContent = H.resumen || H.subtitulo;
+    // El signo final (! o .) va en naranjo; si no hay, se agrega un punto
+    const t = String(H.titulo).trim(), fin = /[!.?]$/.test(t) ? t.slice(-1) : ".";
+    $("titulo").innerHTML = esc(fin === "." && !t.endsWith(".") ? t : t.slice(0, -1)) + `<span class="dot">${fin}</span>`;
+    if (t.length > 12) $("titulo").classList.add("largo");
+    $("subtitulo").textContent = H.subtitulo;
     $("cierre").textContent = H.cierre;
     $("firma").textContent = "— " + H.firma;
     $("rango").textContent = H.fechaInicio.slice(0, 4) + " → ∞";
 
-    // Resumen en números
-    const calculados = {
-      dias: ["+", Math.floor((Date.now() - new Date(H.fechaInicio + "T00:00:00")) / DIA)],
-      fotos: ["", H.hitos.reduce((n, h) => n + (h.fotos ? h.fotos.length : 0), 0)],
-      matrimonio: ["", H.fechaMatrimonio ? Math.max(0, Math.ceil((new Date(H.fechaMatrimonio + "T00:00:00") - Date.now()) / DIA)) : 0]
-    };
-    const nums = $("numeros");
-    (H.numeros || []).forEach(x => {
-      const d = document.createElement("div");
-      d.className = "num" + (x.valor === "matrimonio" ? " destacado" : "");
-      d.innerHTML = `<strong></strong><span class="label">${esc(x.texto)}</span>`;
-      const strong = d.querySelector("strong");
-      if (calculados[x.valor]) countUp(strong, calculados[x.valor][1], calculados[x.valor][0]);
-      else strong.textContent = x.valor;
-      nums.appendChild(d);
-    });
+    const dias = Math.floor((Date.now() - new Date(H.fechaInicio + "T00:00:00")) / DIA);
+    countUp($("dias"), dias, "+");
 
     // "Año 1", "Año 2"... contado desde el año en que empezaron
     const anioInicio = parseInt(H.fechaInicio.slice(0, 4), 10);
