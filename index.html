@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Álbum Digital</title>
+<meta name="description" content="Tom & Cata · 2020 → ∞">
+<meta name="robots" content="noindex, nofollow">
+<meta property="og:title" content="Álbum Digital">
+<meta property="og:description" content="Tom & Cata · 2020 → ∞">
+<meta property="og:image" content="https://tmontes30.github.io/album-digital/og.png">
+<meta property="og:type" content="website">
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="theme-color" content="#111111">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f3ef;
+    --ink: #111111;
+    --muted: #6b6b66;
+    --line: #d9d7d0;
+    --accent: #ff4d2e;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+    --sans: "Inter Tight", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0f0f0e; --ink: #f2f1ec; --muted: #8d8c86; --line: #2a2a27; }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: var(--sans); line-height: 1.5;
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  body.locked { overflow: hidden; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  .label { font-family: var(--mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 48px); }
+
+  /* ================= LOGIN: portada de álbum ================= */
+  .login {
+    position: fixed; inset: 0; z-index: 50; background: var(--bg);
+    display: grid; place-items: center; padding: 24px 16px; overflow-y: auto;
+    transition: opacity .7s ease .9s, visibility 0s linear 1.6s;
+  }
+  .login.done { opacity: 0; visibility: hidden; }
+  .album { perspective: 2000px; width: min(400px, 100%); }
+  .cover {
+    position: relative; aspect-ratio: 3 / 4; min-height: 480px;
+    border-radius: 3px 12px 12px 3px;
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,.028) 0 1px, transparent 1px 3px),
+      repeating-linear-gradient(90deg, rgba(0,0,0,.10) 0 1px, transparent 1px 3px),
+      radial-gradient(120% 90% at 30% 20%, #2b2b28, #161615);
+    color: #ebe8df;
+    box-shadow:
+      5px 5px 0 -1px #ebe8e0, 5px 5px 0 0 #cfcbc0,
+      10px 10px 0 -2px #e2ded4, 10px 10px 0 -1px #c4c0b4,
+      0 40px 70px -20px rgba(0,0,0,.45);
+    transform-origin: left center;
+    transition: transform 1.2s cubic-bezier(.6,.05,.3,1), opacity .5s ease .7s;
+  }
+  .cover::before {  /* lomo */
+    content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 30px;
+    border-radius: 3px 0 0 3px;
+    background: linear-gradient(90deg, rgba(0,0,0,.45), rgba(255,255,255,.06) 70%, rgba(0,0,0,.35));
+  }
+  .cover-inner {
+    position: absolute; inset: 22px 22px 22px 48px;
+    border: 1px dashed rgba(235,232,223,.22); border-radius: 6px;
+    display: flex; flex-direction: column; padding: 26px 24px;
+  }
+  .cover .c-top { display: flex; justify-content: space-between; font-family: var(--mono); font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; color: rgba(235,232,223,.55); }
+  .cover h1 {
+    margin-top: auto; font-size: clamp(2.8rem, 12vw, 3.6rem); font-weight: 800; letter-spacing: -.05em; line-height: .9;
+    color: #ece9e0; text-shadow: 0 1px 0 rgba(0,0,0,.7), 0 -1px 0 rgba(255,255,255,.07);
+  }
+  .cover h1 .dot { color: var(--accent); }
+  .cover form { margin-top: 2rem; display: grid; gap: 10px; }
+  .cover input {
+    width: 100%; background: rgba(255,255,255,.04); border: 0; border-bottom: 1px solid rgba(235,232,223,.3);
+    color: #fff; font: 500 1rem var(--sans); padding: 10px 2px; outline: none; border-radius: 0;
+    transition: border-color .2s;
+  }
+  .cover input::placeholder { color: rgba(235,232,223,.4); font-family: var(--mono); font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; }
+  .cover input:focus { border-bottom-color: var(--accent); }
+  .cover .abrir {
+    margin-top: 10px; background: var(--accent); color: #fff; font-weight: 600; padding: 12px 16px;
+    border-radius: 99px; display: flex; justify-content: space-between; align-items: center;
+    transition: transform .15s, filter .2s;
+  }
+  .cover .abrir:hover { filter: brightness(1.08); }
+  .cover .abrir:active { transform: scale(.98); }
+  .cover .abrir[disabled] { opacity: .6; cursor: wait; }
+  .cover .err { min-height: 1.2em; font-family: var(--mono); font-size: .7rem; color: #ff8a73; letter-spacing: .04em; }
+  .album.shake { animation: shake .45s; }
+  @keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+  .album.open .cover { transform: rotateY(-115deg); opacity: 0; }
+
+  /* Barra de progreso */
+  .progress { position: fixed; top: 0; left: 0; height: 3px; width: 0; background: var(--accent); z-index: 20; }
+
+  /* ---------- Portada ---------- */
+  .hero { display: flex; flex-direction: column; gap: clamp(3rem, 10vh, 7rem); padding-top: 28px; }
+  .hero-top { display: flex; justify-content: space-between; gap: 1rem; }
+  .hero h1 {
+    font-size: clamp(3.5rem, 11vw, 9rem); font-weight: 800; letter-spacing: -.05em; line-height: .9;
+    margin-left: -.04em;
+  }
+  .hero h1 .dot { color: var(--accent); }
+  .hero-bottom { display: grid; grid-template-columns: 1fr auto; gap: 2rem; align-items: end; border-top: 1px solid var(--ink); padding-top: 20px; }
+  .hero-bottom p { font-size: clamp(1.1rem, 2.2vw, 1.5rem); max-width: 30ch; font-weight: 500; letter-spacing: -.01em; }
+  .stat strong { display: block; font-size: clamp(1.6rem, 3.5vw, 2.6rem); font-weight: 700; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+
+  /* ---------- Mapa: línea de tiempo de la portada ---------- */
+  .mapa { margin: clamp(2.5rem, 6vw, 4rem) 0 clamp(3rem, 8vw, 6rem); }
+  .mapa ol {
+    list-style: none; display: flex; overflow-x: auto; scrollbar-width: none;
+    padding: 14px 0 8px; margin: -10px calc(-1 * clamp(16px, 4vw, 48px)); padding-inline: clamp(16px, 4vw, 48px);
+  }
+  .mapa ol::-webkit-scrollbar { display: none; }
+  .mapa li.anio { position: relative; flex: 1 0 128px; padding: 26px 16px 0 0; }
+  .mapa li.anio::after {
+    content: ""; position: absolute; top: 5px; left: 0; right: 0; height: 2px; background: var(--ink);
+  }
+  .mapa li.anio::before {
+    content: ""; position: absolute; top: 0; left: 0; z-index: 1;
+    width: 12px; height: 12px; border-radius: 50%; background: var(--ink);
+  }
+  .mapa .y { display: block; font-weight: 700; font-size: 1.05rem; letter-spacing: -.02em; margin-bottom: .35rem; }
+  .mapa ul { list-style: none; display: grid; gap: .3rem; }
+  .mapa a {
+    color: var(--muted); text-decoration: none; font-size: .86rem; line-height: 1.25; display: block;
+    transition: color .2s;
+  }
+  .mapa a:hover, .mapa a:focus-visible { color: var(--ink); }
+  .mapa a:hover::before { content: "→ "; color: var(--accent); }
+  .mapa li.futuro::after { background: repeating-linear-gradient(90deg, var(--ink) 0 6px, transparent 6px 12px); }
+  .mapa li.futuro::before { background: var(--accent); }
+  .mapa li.futuro a { color: var(--ink); font-weight: 600; }
+  .mapa li.infinito { position: relative; flex: 2 0 160px; padding-top: 26px; }
+  .mapa li.infinito::after {
+    content: ""; position: absolute; top: 5px; left: 0; right: 0; height: 2px;
+    background: repeating-linear-gradient(90deg, var(--ink) 0 6px, transparent 6px 12px);
+    -webkit-mask-image: linear-gradient(90deg, #000 30%, transparent);
+            mask-image: linear-gradient(90deg, #000 30%, transparent);
+  }
+  .mapa li.infinito span { position: absolute; right: 0; top: -9px; font-size: 1.4rem; font-weight: 600; color: var(--muted); }
+
+  /* ---------- Hitos ---------- */
+  .hito {
+    display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(1.5rem, 5vw, 5rem);
+    border-top: 1px solid var(--line); padding: clamp(3rem, 8vw, 7rem) 0;
+  }
+  .hito .sticky { position: sticky; top: 40px; }
+  .hito .year {
+    font-size: clamp(2.8rem, 6vw, 5rem); font-weight: 800; letter-spacing: -.05em; line-height: .9;
+    margin: .6rem 0 0 -.04em;
+  }
+  .hito h2 { font-size: clamp(1.6rem, 3vw, 2.4rem); font-weight: 600; letter-spacing: -.035em; line-height: 1.05; }
+  .hito p { margin-top: 1rem; font-size: 1.1rem; color: var(--muted); max-width: 46ch; }
+
+  /* ---------- Carrusel ---------- */
+  .carrusel { position: relative; margin-top: 2rem; }
+  .track {
+    display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
+    border-radius: 4px; background: var(--line); overscroll-behavior-x: contain;
+  }
+  .track::-webkit-scrollbar { display: none; }
+  .slide { flex: 0 0 100%; aspect-ratio: 4 / 5; scroll-snap-align: start; cursor: zoom-in; }
+  .slide img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity .5s; }
+  .slide img.ok { opacity: 1; }
+  .nav {
+    position: absolute; top: 50%; translate: 0 -50%;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(255,255,255,.88); color: #111; font-size: 1.1rem; line-height: 1;
+    display: grid; place-items: center; box-shadow: 0 2px 10px rgba(0,0,0,.15);
+    opacity: 0; transition: opacity .25s;
+  }
+  .nav.prev { left: 12px; } .nav.next { right: 12px; }
+  .carrusel:hover .nav:not([disabled]) { opacity: 1; }
+  .nav[disabled] { pointer-events: none; }
+  .cuenta {
+    position: absolute; top: 12px; right: 12px; padding: 4px 9px; border-radius: 99px;
+    background: rgba(0,0,0,.55); color: #fff; font-family: var(--mono); font-size: .7rem;
+  }
+  .dots { display: flex; justify-content: center; gap: 6px; margin-top: 12px; }
+  .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); transition: background .2s, transform .2s; }
+  .dots i.on { background: var(--ink); transform: scale(1.25); }
+  @media (hover: none) { .nav { display: none; } }
+
+  /* Animación de entrada */
+  .reveal { opacity: 0; transform: translateY(32px); transition: opacity .9s ease, transform .9s cubic-bezier(.2,.7,.2,1); }
+  .reveal.visible { opacity: 1; transform: none; }
+
+  /* Futuro */
+  .sep-futuro { border-top: 1px solid var(--ink); padding: 2.5rem 0 0; display: flex; justify-content: space-between; }
+  .sep-futuro .label { color: var(--ink); }
+  .hito.futuro .year { color: transparent; -webkit-text-stroke: 1.5px var(--ink); }
+  .hito.futuro h2::after { content: ""; display: inline-block; width: .45em; height: .45em; background: var(--accent); border-radius: 50%; margin-left: .3em; vertical-align: .1em; }
+  .countdown { margin-top: 2rem; display: inline-flex; gap: .8rem; align-items: baseline; border: 1px solid var(--ink); padding: .9rem 1.2rem; }
+  .countdown strong { font-size: 2rem; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+
+  /* ---------- Cierre ---------- */
+  .cierre { border-top: 1px solid var(--ink); padding: clamp(4rem, 12vw, 10rem) 0 3rem; }
+  .cierre h2 { font-size: clamp(2rem, 4.5vw, 3.6rem); font-weight: 700; letter-spacing: -.05em; line-height: .95; max-width: 14ch; }
+  .cierre-foot { display: flex; justify-content: space-between; margin-top: clamp(3rem, 8vw, 6rem); }
+  .salir { font-family: var(--mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+
+  /* ---------- Lightbox ---------- */
+  .lightbox {
+    position: fixed; inset: 0; background: rgba(10,10,10,.95); z-index: 30;
+    display: none; align-items: center; justify-content: center; padding: 16px;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox img { max-width: 100%; max-height: 88svh; user-select: none; }
+  .lightbox button { position: absolute; color: #fff; font-size: 1.6rem; width: 52px; height: 52px; opacity: .75; }
+  .lightbox button:hover { opacity: 1; }
+  .lb-prev { left: 8px; top: 50%; translate: 0 -50%; }
+  .lb-next { right: 8px; top: 50%; translate: 0 -50%; }
+  .lb-close { top: 8px; right: 8px; }
+  .lb-cuenta { position: absolute; bottom: 16px; left: 50%; translate: -50% 0; color: #bbb; font-family: var(--mono); font-size: .75rem; }
+
+  /* Móvil */
+  @media (max-width: 760px) {
+    .hito { grid-template-columns: 1fr; gap: 1rem; }
+    .hito .sticky { position: static; }
+    .hero-bottom { grid-template-columns: 1fr; }
+    .lb-prev, .lb-next { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+    html { scroll-behavior: auto; }
+    .cover, .login { transition: none; }
+  }
+</style>
+</head>
+<body class="locked">
+
+<!-- ================= LOGIN ================= -->
+<div class="login" id="login">
+  <div class="album" id="album">
+    <div class="cover">
+      <div class="cover-inner">
+        <div class="c-top"><span>Tom &amp; Cata</span><span>2020 → ∞</span></div>
+        <h1>Álbum<br>Digital<span class="dot">.</span></h1>
+        <form id="loginForm" autocomplete="on">
+          <input id="u" name="username" placeholder="Usuario" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+          <input id="p" name="password" type="password" placeholder="Contraseña" autocomplete="current-password" required>
+          <button class="abrir" id="abrir" type="submit"><span>Abrir álbum</span><span>→</span></button>
+          <p class="err" id="err" role="alert"></p>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= ÁLBUM ================= -->
+<div class="progress" id="progress"></div>
+
+<header class="wrap hero">
+  <div class="hero-top">
+    <span class="label" id="nombres"></span>
+    <span class="label" id="rango"></span>
+  </div>
+  <h1 id="titulo"></h1>
+  <div>
+    <div class="hero-bottom">
+      <p id="subtitulo"></p>
+      <div class="stat"><strong id="dias">0</strong><span class="label">días</span></div>
+    </div>
+    <nav class="mapa" aria-label="Línea de tiempo"><ol id="mapa"></ol></nav>
+  </div>
+</header>
+
+<main class="wrap" id="timeline"></main>
+
+<footer class="wrap cierre">
+  <h2 id="cierre" class="reveal"></h2>
+  <div class="cierre-foot">
+    <span class="label" id="firma"></span>
+    <button class="salir" id="salir">Cerrar álbum</button>
+  </div>
+</footer>
+
+<div class="lightbox" id="lightbox">
+  <img alt="">
+  <button class="lb-prev" aria-label="Anterior">←</button>
+  <button class="lb-next" aria-label="Siguiente">→</button>
+  <button class="lb-close" aria-label="Cerrar">✕</button>
+  <span class="lb-cuenta"></span>
+</div>
+
+<!-- En local se usa historia.js (sin encriptar). Publicado, ese archivo no existe y se usa data.bin. -->
+<script src="historia.js" onerror="void 0"></script>
+<script>
+  const $ = id => document.getElementById(id);
+  const fmt = n => n.toLocaleString("es-CL");
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const DIA = 86400000;
+
+  // ================= LOGIN + DESENCRIPTADO =================
+  const USUARIOS = ["Tom", "Cata"];           // con mayúscula, tal cual
+  const ITER = 250000;                        // igual que en publicar.py
+  const ss = {
+    get(k) { try { return sessionStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { sessionStorage.setItem(k, v); } catch {} },
+    del(k) { try { sessionStorage.removeItem(k); } catch {} }
+  };
+  const b64 = { to: buf => btoa(String.fromCharCode(...new Uint8Array(buf))), from: s => Uint8Array.from(atob(s), c => c.charCodeAt(0)) };
+
+  let KEY = null, DATA_BIN = null;
+
+  async function getDataBin() {
+    if (!DATA_BIN) {
+      const r = await fetch("data.bin", { cache: "no-store" });
+      if (!r.ok) throw new Error("sin data");
+      DATA_BIN = new Uint8Array(await r.arrayBuffer());
+    }
+    return DATA_BIN;
+  }
+  async function deriveKey(password, salt) {
+    const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"]);
+    return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: ITER, hash: "SHA-256" },
+      base, { name: "AES-GCM", length: 256 }, true, ["decrypt"]);
+  }
+  const decrypt = (key, bytes) =>
+    crypto.subtle.decrypt({ name: "AES-GCM", iv: bytes.slice(0, 12) }, key, bytes.slice(12));
+
+  async function openWithKey(key) {
+    const bin = await getDataBin();
+    const json = new TextDecoder().decode(await decrypt(key, bin.slice(16)));  // falla si la clave es mala
+    KEY = key;
+    return JSON.parse(json);
+  }
+
+  // Fotos: en local son rutas normales; publicadas se bajan y desencriptan bajo demanda
+  const cacheFotos = new Map();
+  function fotoURL(src) {
+    if (!KEY) return Promise.resolve(src);
+    if (!cacheFotos.has(src)) {
+      cacheFotos.set(src, fetch(src)
+        .then(r => r.arrayBuffer())
+        .then(buf => decrypt(KEY, new Uint8Array(buf)))
+        .then(plain => URL.createObjectURL(new Blob([plain], { type: "image/jpeg" }))));
+    }
+    return cacheFotos.get(src);
+  }
+
+  function unlock(H, usuario) {
+    $("album").classList.add("open");
+    $("login").classList.add("done");
+    document.body.classList.remove("locked");
+    start(H, usuario);
+  }
+
+  (async function init() {
+    if (window.HISTORIA) {               // vista previa local: sin login
+      $("login").remove(); document.body.classList.remove("locked");
+      return start(window.HISTORIA, null);
+    }
+    const saved = ss.get("album-key");   // misma pestaña: no volver a pedir clave
+    if (saved) {
+      try {
+        const key = await crypto.subtle.importKey("raw", b64.from(saved), "AES-GCM", true, ["decrypt"]);
+        const H = await openWithKey(key);
+        $("login").style.transition = "none";
+        return unlock(H, ss.get("album-user"));
+      } catch { ss.del("album-key"); }
+    }
+    $("u").focus();
+  })();
+
+  $("loginForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const u = $("u").value.trim(), p = $("p").value;
+    const btn = $("abrir"), err = $("err");
+    err.textContent = "";
+    const fail = msg => {
+      err.textContent = msg;
+      const a = $("album"); a.classList.remove("shake"); void a.offsetWidth; a.classList.add("shake");
+      btn.disabled = false;
+    };
+    if (!USUARIOS.includes(u)) return fail("Ese usuario no existe.");
+    btn.disabled = true;
+    try {
+      const bin = await getDataBin();
+      const key = await deriveKey(p, bin.slice(0, 16));
+      const H = await openWithKey(key);
+      ss.set("album-key", b64.to(await crypto.subtle.exportKey("raw", key)));
+      ss.set("album-user", u);
+      unlock(H, u);
+    } catch (ex) {
+      fail(ex.message === "sin data" ? "No se pudo cargar el álbum." : "Contraseña incorrecta.");
+      $("p").select();
+    }
+  });
+
+  $("salir").onclick = () => { ss.del("album-key"); ss.del("album-user"); location.reload(); };
+
+  // ================= ÁLBUM =================
+  function start(H, usuario) {
+    document.title = H.nombrePagina || H.titulo;
+    $("nombres").textContent = usuario ? `Hola, ${usuario}` : H.nombres;
+    $("titulo").innerHTML = esc(H.titulo) + '<span class="dot">.</span>';
+    $("subtitulo").textContent = H.subtitulo;
+    $("cierre").textContent = H.cierre;
+    $("firma").textContent = "— " + H.firma;
+    $("rango").textContent = H.fechaInicio.slice(0, 4) + " → ∞";
+
+    const dias = Math.floor((Date.now() - new Date(H.fechaInicio + "T00:00:00")) / DIA);
+    countUp($("dias"), dias);
+
+    // "Año 1", "Año 2"... contado desde el año en que empezaron
+    const anioInicio = parseInt(H.fechaInicio.slice(0, 4), 10);
+    const etiquetaAnio = h => {
+      const y = parseInt(String(h.fecha).match(/\d{4}/)?.[0], 10);
+      if (!y) return "Próximamente";
+      const k = y - anioInicio;
+      return k <= 0 ? "El comienzo" : "Año " + k;
+    };
+
+    // Mapa de la portada: hitos agrupados por año, y la línea sigue hasta el infinito
+    const grupos = [];
+    H.hitos.forEach((h, i) => {
+      const g = grupos[grupos.length - 1];
+      if (g && g.fecha === h.fecha) g.items.push([h, i]);
+      else grupos.push({ fecha: h.fecha, futuro: !!h.futuro, items: [[h, i]] });
+    });
+    $("mapa").innerHTML = grupos.map(g => `
+      <li class="anio${g.futuro ? " futuro" : ""}">
+        <span class="y">${esc(g.fecha)}</span>
+        <ul>${g.items.map(([h, i]) => `<li><a href="#hito-${i}">${esc(h.titulo)}</a></li>`).join("")}</ul>
+      </li>`).join("") + '<li class="infinito" aria-label="y sigue"><span>∞</span></li>';
+
+    // Hitos
+    const tl = $("timeline");
+    let sepPuesto = false;
+    H.hitos.forEach((h, i) => {
+      if (h.futuro && !sepPuesto) {
+        tl.insertAdjacentHTML("beforeend", '<div class="sep-futuro"><span class="label">Lo que viene</span><span class="label">→ ∞</span></div>');
+        sepPuesto = true;
+      }
+      const el = document.createElement("article");
+      el.className = "hito" + (h.futuro ? " futuro" : "");
+      el.id = "hito-" + i;
+      let extra = "";
+      if (h.matrimonio && H.fechaMatrimonio) {
+        const faltan = Math.ceil((new Date(H.fechaMatrimonio + "T00:00:00") - Date.now()) / DIA);
+        if (faltan > 0) extra = `<div class="countdown"><strong>${fmt(faltan)}</strong><span class="label">días para el matrimonio</span></div>`;
+      }
+      el.innerHTML = `
+        <div class="side"><div class="sticky reveal">
+          <span class="label">${etiquetaAnio(h)}</span>
+          <div class="year">${esc(h.fecha)}</div>
+        </div></div>
+        <div class="body reveal">
+          <h2>${esc(h.titulo)}</h2>
+          ${h.texto ? `<p>${esc(h.texto)}</p>` : ""}
+          ${extra}
+        </div>`;
+      if (h.fotos && h.fotos.length) el.querySelector(".body").appendChild(carrusel(h.fotos, h.titulo));
+      tl.appendChild(el);
+    });
+
+    // Aparición al hacer scroll
+    const io = new IntersectionObserver(es => es.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add("visible"); io.unobserve(e.target); }
+    }), { threshold: 0.12 });
+    document.querySelectorAll(".reveal").forEach(el => io.observe(el));
+
+    // Las fotos de un hito se cargan cuando el hito se acerca a la pantalla
+    const ioFotos = new IntersectionObserver(es => es.forEach(e => {
+      if (!e.isIntersecting) return;
+      ioFotos.unobserve(e.target);
+      e.target.querySelectorAll("img[data-src]").forEach(img => {
+        fotoURL(img.dataset.src).then(url => {
+          img.onload = () => img.classList.add("ok");
+          img.src = url;
+        }).catch(() => {});
+        img.removeAttribute("data-src");
+      });
+    }), { rootMargin: "1000px 0px" });
+    document.querySelectorAll(".carrusel").forEach(c => ioFotos.observe(c));
+
+    // Si se entró con #hito-N en la URL, saltar ahí
+    if (location.hash) setTimeout(() => document.querySelector(location.hash)?.scrollIntoView(), 50);
+  }
+
+  function countUp(el, target) {
+    const t0 = performance.now(), dur = 1600;
+    (function step(t) {
+      const p = Math.min((t - t0) / dur, 1);
+      el.textContent = fmt(Math.round(target * (1 - Math.pow(1 - p, 4))));
+      if (p < 1) requestAnimationFrame(step);
+    })(t0);
+  }
+
+  function carrusel(fotos, alt) {
+    const c = document.createElement("div");
+    c.className = "carrusel";
+    c.innerHTML = `
+      <div class="track">${fotos.map(src =>
+        `<div class="slide"><img data-src="${esc(src)}" alt="${esc(alt)}" decoding="async"></div>`).join("")}</div>
+      ${fotos.length > 1 ? `
+        <button class="nav prev" aria-label="Anterior">←</button>
+        <button class="nav next" aria-label="Siguiente">→</button>
+        <span class="cuenta">1 / ${fotos.length}</span>` : ""}`;
+    const track = c.querySelector(".track");
+    track.querySelectorAll(".slide").forEach((s, k) => s.onclick = () => openLightbox(fotos, k));
+    if (fotos.length > 1) {
+      const dots = document.createElement("div");
+      dots.className = "dots";
+      dots.innerHTML = fotos.map(() => "<i></i>").join("");
+      c.appendChild(dots);
+      const prev = c.querySelector(".prev"), next = c.querySelector(".next"), cuenta = c.querySelector(".cuenta");
+      const idx = () => track.clientWidth ? Math.round(track.scrollLeft / track.clientWidth) : 0;
+      const go = k => track.scrollTo({ left: k * track.clientWidth, behavior: "smooth" });
+      const update = () => {
+        const k = idx();
+        cuenta.textContent = `${k + 1} / ${fotos.length}`;
+        dots.querySelectorAll("i").forEach((d, j) => d.classList.toggle("on", j === k));
+        prev.disabled = k === 0; next.disabled = k === fotos.length - 1;
+      };
+      prev.onclick = () => go(idx() - 1);
+      next.onclick = () => go(idx() + 1);
+      track.addEventListener("scroll", () => requestAnimationFrame(update), { passive: true });
+      update();
+    }
+    return c;
+  }
+
+  // Barra de progreso
+  const bar = $("progress");
+  addEventListener("scroll", () => {
+    const max = document.documentElement.scrollHeight - innerHeight;
+    bar.style.width = (max > 0 ? scrollY / max * 100 : 0) + "%";
+  }, { passive: true });
+
+  // Lightbox con navegación
+  const lb = $("lightbox"), lbImg = lb.querySelector("img"), lbCuenta = lb.querySelector(".lb-cuenta");
+  let lbFotos = [], lbK = 0;
+  function openLightbox(fotos, k) { lbFotos = fotos; lbK = k; showLb(); lb.classList.add("open"); }
+  function showLb() {
+    lbK = (lbK + lbFotos.length) % lbFotos.length;
+    const k = lbK;
+    fotoURL(lbFotos[k]).then(url => { if (k === lbK) lbImg.src = url; });
+    lbCuenta.textContent = lbFotos.length > 1 ? `${lbK + 1} / ${lbFotos.length}` : "";
+  }
+  const closeLb = () => lb.classList.remove("open");
+  lb.querySelector(".lb-prev").onclick = e => { e.stopPropagation(); lbK--; showLb(); };
+  lb.querySelector(".lb-next").onclick = e => { e.stopPropagation(); lbK++; showLb(); };
+  lb.querySelector(".lb-close").onclick = closeLb;
+  lb.onclick = e => { if (e.target === lb) closeLb(); };
+  lbImg.onclick = e => { e.stopPropagation(); lbK++; showLb(); };
+  addEventListener("keydown", e => {
+    if (!lb.classList.contains("open")) return;
+    if (e.key === "Escape") closeLb();
+    if (e.key === "ArrowLeft") { lbK--; showLb(); }
+    if (e.key === "ArrowRight") { lbK++; showLb(); }
+  });
+  let x0 = null;
+  lb.addEventListener("touchstart", e => x0 = e.touches[0].clientX, { passive: true });
+  lb.addEventListener("touchend", e => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0; x0 = null;
+    if (Math.abs(dx) > 50) { lbK += dx < 0 ? 1 : -1; showLb(); }
+  });
+</script>
+</body>
+</html>
