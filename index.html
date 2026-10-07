@@ -119,6 +119,8 @@
   .hero h1 .dot { color: var(--accent); }
   .hero-bottom { display: grid; grid-template-columns: 1fr auto; gap: 2rem; align-items: end; border-top: 1px solid var(--ink); padding-top: 20px; }
   .hero-bottom p { font-size: clamp(1.1rem, 2.2vw, 1.5rem); max-width: 30ch; font-weight: 500; letter-spacing: -.01em; }
+  .stat { text-align: right; }
+  .stat .label { display: block; margin-top: 6px; }
   .stat strong { display: block; font-size: clamp(1.6rem, 3.5vw, 2.6rem); font-weight: 700; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums; }
 
   /* ---------- Mapa: línea de tiempo de la portada ---------- */
@@ -128,7 +130,7 @@
     padding: 14px 0 8px; margin: -10px calc(-1 * clamp(16px, 4vw, 48px)); padding-inline: clamp(16px, 4vw, 48px);
   }
   .mapa ol::-webkit-scrollbar { display: none; }
-  .mapa li.anio { position: relative; flex: 1 0 128px; padding: 26px 16px 0 0; }
+  .mapa li.anio { position: relative; flex: 1 0 122px; padding: 26px 16px 0 0; }
   .mapa li.anio::after {
     content: ""; position: absolute; top: 5px; left: 0; right: 0; height: 2px; background: var(--ink);
   }
@@ -136,6 +138,25 @@
     content: ""; position: absolute; top: 0; left: 0; z-index: 1;
     width: 12px; height: 12px; border-radius: 50%; background: var(--ink);
   }
+  .mapa .flecha {                        /* punta de flecha en cada tramo */
+    position: absolute; top: 2px; right: 12px; width: 8px; height: 8px;
+    border-top: 2px solid var(--ink); border-right: 2px solid var(--ink); transform: rotate(45deg);
+  }
+  .mapa { position: relative; }
+  .mapa .desliza { display: none; }
+  @media (max-width: 760px) {
+    .mapa::after {                       /* degradado al borde: hay más hacia la derecha */
+      content: ""; position: absolute; top: -10px; bottom: 0; right: calc(-1 * clamp(16px, 4vw, 48px)); width: 56px;
+      background: linear-gradient(90deg, transparent, var(--bg)); pointer-events: none; transition: opacity .3s;
+    }
+    .mapa.movido::after { opacity: 0; }
+    .mapa .desliza {
+      display: inline-flex; gap: .4em; margin-bottom: 14px; color: var(--ink);
+      animation: empuja 1.4s ease-in-out infinite;
+    }
+    .mapa.movido .desliza { visibility: hidden; animation: none; }
+  }
+  @keyframes empuja { 50% { transform: translateX(6px); } }
   .mapa .y { display: block; font-weight: 700; font-size: 1.05rem; letter-spacing: -.02em; margin-bottom: .35rem; }
   .mapa ul { list-style: none; display: grid; gap: .3rem; }
   .mapa a {
@@ -147,7 +168,7 @@
   .mapa li.futuro::after { background: repeating-linear-gradient(90deg, var(--ink) 0 6px, transparent 6px 12px); }
   .mapa li.futuro::before { background: var(--accent); }
   .mapa li.futuro a { color: var(--ink); font-weight: 600; }
-  .mapa li.infinito { position: relative; flex: 2 0 160px; padding-top: 26px; }
+  .mapa li.infinito { position: relative; flex: 2 0 90px; padding-top: 26px; }
   .mapa li.infinito::after {
     content: ""; position: absolute; top: 5px; left: 0; right: 0; height: 2px;
     background: repeating-linear-gradient(90deg, var(--ink) 0 6px, transparent 6px 12px);
@@ -235,6 +256,7 @@
     .hito { grid-template-columns: 1fr; gap: 1rem; }
     .hito .sticky { position: static; }
     .hero-bottom { grid-template-columns: 1fr; }
+    .stat { text-align: left; }
     .lb-prev, .lb-next { display: none; }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -276,9 +298,9 @@
   <div>
     <div class="hero-bottom">
       <p id="subtitulo"></p>
-      <div class="stat"><strong id="dias">0</strong><span class="label">días</span></div>
+      <div class="stat"><strong id="dias">+0</strong><span class="label">días desde que nos conocimos</span></div>
     </div>
-    <nav class="mapa" aria-label="Línea de tiempo"><ol id="mapa"></ol></nav>
+    <nav class="mapa" id="mapaNav" aria-label="Línea de tiempo"><span class="label desliza">Desliza <span>→</span></span><ol id="mapa"></ol></nav>
   </div>
 </header>
 
@@ -418,7 +440,7 @@
     $("rango").textContent = H.fechaInicio.slice(0, 4) + " → ∞";
 
     const dias = Math.floor((Date.now() - new Date(H.fechaInicio + "T00:00:00")) / DIA);
-    countUp($("dias"), dias);
+    countUp($("dias"), dias, "+");
 
     // "Año 1", "Año 2"... contado desde el año en que empezaron
     const anioInicio = parseInt(H.fechaInicio.slice(0, 4), 10);
@@ -438,9 +460,11 @@
     });
     $("mapa").innerHTML = grupos.map(g => `
       <li class="anio${g.futuro ? " futuro" : ""}">
+        <i class="flecha" aria-hidden="true"></i>
         <span class="y">${esc(g.fecha)}</span>
         <ul>${g.items.map(([h, i]) => `<li><a href="#hito-${i}">${esc(h.titulo)}</a></li>`).join("")}</ul>
       </li>`).join("") + '<li class="infinito" aria-label="y sigue"><span>∞</span></li>';
+    $("mapa").addEventListener("scroll", () => $("mapaNav").classList.add("movido"), { passive: true, once: true });
 
     // Hitos
     const tl = $("timeline");
@@ -496,11 +520,11 @@
     if (location.hash) setTimeout(() => document.querySelector(location.hash)?.scrollIntoView(), 50);
   }
 
-  function countUp(el, target) {
+  function countUp(el, target, prefijo = "") {
     const t0 = performance.now(), dur = 1600;
     (function step(t) {
       const p = Math.min((t - t0) / dur, 1);
-      el.textContent = fmt(Math.round(target * (1 - Math.pow(1 - p, 4))));
+      el.textContent = prefijo + fmt(Math.round(target * (1 - Math.pow(1 - p, 4))));
       if (p < 1) requestAnimationFrame(step);
     })(t0);
   }
