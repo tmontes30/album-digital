@@ -18,7 +18,8 @@
 <meta property="og:type" content="website">
 <link rel="icon" type="image/svg+xml" href="logo.svg">
 <link rel="apple-touch-icon" href="icon.png">
-<meta name="theme-color" content="#111111">
+<meta name="theme-color" content="#f4f3ef">
+<meta name="color-scheme" content="light only">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -32,9 +33,7 @@
     --mono: "JetBrains Mono", ui-monospace, monospace;
     --sans: "Inter Tight", system-ui, sans-serif;
   }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg: #0f0f0e; --ink: #f2f1ec; --muted: #8d8c86; --line: #2a2a27; }
-  }
+  :root { color-scheme: light only; }   /* siempre claro, aunque el celular esté en modo oscuro */
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
   body {
