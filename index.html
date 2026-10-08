@@ -246,9 +246,10 @@
     -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
             mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
   }
-  .fila { overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
-  .fila::-webkit-scrollbar { display: none; }
-  .fila-track { display: flex; gap: 10px; width: max-content; }
+  .fila { overflow: hidden; touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none; }
+  .fila:active { cursor: grabbing; }
+  .fila-track { display: flex; gap: 10px; width: max-content; will-change: transform; }
+  .fila img { -webkit-user-drag: none; pointer-events: none; }
   .g-item {
     position: relative; flex: none; height: clamp(140px, 21vw, 250px); min-width: 110px;
     border-radius: 4px; overflow: hidden; background: #1e1e1c; cursor: zoom-in;
@@ -277,12 +278,18 @@
   }
   .lightbox.open { display: flex; }
   .lightbox img { max-width: 100%; max-height: 88svh; user-select: none; }
-  .lightbox button { position: absolute; color: #fff; font-size: 1.6rem; width: 52px; height: 52px; opacity: .75; }
-  .lightbox button:hover { opacity: 1; }
-  .lb-prev { left: 8px; top: 50%; translate: 0 -50%; }
-  .lb-next { right: 8px; top: 50%; translate: 0 -50%; }
-  .lb-close { top: 8px; right: 8px; }
-  .lb-cuenta { position: absolute; bottom: 16px; left: 50%; translate: -50% 0; color: #bbb; font-family: var(--mono); font-size: .75rem; }
+  .lightbox button {
+    position: absolute; color: #fff; font-size: 1.35rem; width: 52px; height: 52px; border-radius: 50%;
+    display: grid; place-items: center; background: rgba(255,255,255,.12);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    transition: background .2s, transform .15s; -webkit-tap-highlight-color: transparent;
+  }
+  .lightbox button:hover { background: rgba(255,255,255,.22); }
+  .lightbox button:active { transform: scale(.92); }
+  .lb-prev { left: 16px; top: 50%; translate: 0 -50%; }
+  .lb-next { right: 16px; top: 50%; translate: 0 -50%; }
+  .lb-close { top: 14px; right: 14px; width: 44px !important; height: 44px !important; font-size: 1.1rem !important; }
+  .lb-cuenta { position: absolute; bottom: 18px; left: 50%; translate: -50% 0; color: #bbb; font-family: var(--mono); font-size: .75rem; }
 
   /* Móvil */
   @media (max-width: 760px) {
@@ -290,7 +297,11 @@
     .hito .sticky { position: static; }
     .hero-bottom { grid-template-columns: 1fr; }
     .stat { text-align: left; }
-    .lb-prev, .lb-next { display: none; }
+    .lightbox { padding: 16px 16px 96px; }
+    .lightbox img { max-height: calc(100svh - 140px); }
+    .lightbox .lb-prev, .lightbox .lb-next { top: auto; bottom: 22px; translate: none; width: 60px; height: 60px; font-size: 1.5rem; }
+    .lb-prev { left: 22%; } .lb-next { right: 22%; }
+    .lb-cuenta { bottom: 44px; }
   }
   @media (prefers-reduced-motion: reduce) {
     .reveal { opacity: 1; transform: none; transition: none; }
@@ -374,7 +385,7 @@
   const DIA = 86400000;
 
   // ================= LOGIN + DESENCRIPTADO =================
-  const USUARIOS = ["Tom", "Cata"];           // con mayúscula, tal cual
+  const USUARIOS = ["Tom", "Cata"];           // el usuario da lo mismo con o sin mayúscula; la clave no
   const ITER = 250000;                        // igual que en publicar.py
   const ss = {
     get(k) { try { return sessionStorage.getItem(k); } catch { return null; } },
@@ -422,11 +433,16 @@
   }
 
   function unlock(H, usuario) {
+    if (document.activeElement) document.activeElement.blur();   // cierra el teclado del celular
     $("album").classList.add("open");
     $("login").classList.add("done");
     document.body.classList.remove("locked");
     start(H, usuario);
+    // El teclado del celular desplaza la página: volver arriba mientras se abre la tapa
+    arriba();
+    [100, 400, 900, 1700].forEach(ms => setTimeout(arriba, ms));
   }
+  function arriba() { scrollTo({ top: 0, left: 0, behavior: "instant" }); }
 
   (async function init() {
     if (window.HISTORIA) {               // vista previa local: sin login
@@ -442,7 +458,7 @@
         return unlock(H, ss.get("album-user"));
       } catch { ss.del("album-key"); }
     }
-    $("u").focus();
+    if (matchMedia("(hover: hover)").matches) $("u").focus();   // en celular no abrir el teclado solo
   })();
 
   $("loginForm").addEventListener("submit", async e => {
@@ -455,15 +471,16 @@
       const a = $("album"); a.classList.remove("shake"); void a.offsetWidth; a.classList.add("shake");
       btn.disabled = false;
     };
-    if (!USUARIOS.includes(u)) return fail("Ese usuario no existe.");
+    const usuario = USUARIOS.find(x => x.toLowerCase() === u.toLowerCase());
+    if (!usuario) return fail("Ese usuario no existe.");
     btn.disabled = true;
     try {
       const bin = await getDataBin();
       const key = await deriveKey(p, bin.slice(0, 16));
       const H = await openWithKey(key);
       ss.set("album-key", b64.to(await crypto.subtle.exportKey("raw", key)));
-      ss.set("album-user", u);
-      unlock(H, u);
+      ss.set("album-user", usuario);
+      unlock(H, usuario);
     } catch (ex) {
       fail(ex.message === "sin data" ? "No se pudo cargar el álbum." : "Contraseña incorrecta.");
       $("p").select();
@@ -627,39 +644,51 @@
 
     // Repartir en 3 filas intercaladas; cada fila va duplicada para que el loop no tenga corte
     const N = 3, filas = $("filas");
-    const quieto = matchMedia("(prefers-reduced-motion: reduce)").matches;
     for (let r = 0; r < N; r++) {
       const items = todas.map((f, k) => [f, k]).filter(([, k]) => k % N === r);
       const fila = document.createElement("div");
       fila.className = "fila";
       const tile = ([f, k]) => `<div class="g-item" data-k="${k}"><img data-src="${esc(f.src)}" alt="" decoding="async"><span>${esc(f.anio)}</span></div>`;
       fila.innerHTML = `<div class="fila-track">${items.map(tile).join("")}${items.map(tile).join("")}</div>`;
-      fila.querySelectorAll(".g-item").forEach(it => it.onclick = () => openLightbox(lista, +it.dataset.k));
+      const track = fila.firstElementChild;
       filas.appendChild(fila);
 
-      // Movimiento: fila del medio al revés. Se pausa con el mouse encima o al tocar.
+      // Movimiento con transform (funciona igual en todos los celulares).
+      // Fila del medio al revés. Se pausa con el mouse encima; con el dedo se arrastra.
       const dir = r % 2 ? -1 : 1, vel = 0.35 + r * 0.07;
-      let pos = 0, pausa = false, reanudar = null, iniciado = false;
-      const mitad = () => fila.scrollWidth / 2;
+      let pos = 0, pausa = false, reanudar = null, arrastre = null, movido = false, ultimo = performance.now();
       const parar = () => { pausa = true; clearTimeout(reanudar); };
-      const seguir = (ms) => { clearTimeout(reanudar); reanudar = setTimeout(() => { pos = fila.scrollLeft; pausa = false; }, ms); };
+      const seguir = ms => { clearTimeout(reanudar); reanudar = setTimeout(() => pausa = false, ms); };
       fila.addEventListener("pointerenter", e => { if (e.pointerType === "mouse") parar(); });
-      fila.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") seguir(300); });
-      fila.addEventListener("touchstart", parar, { passive: true });
-      fila.addEventListener("touchend", () => seguir(2500), { passive: true });
-      fila.addEventListener("wheel", () => { parar(); seguir(1500); }, { passive: true });
-      if (quieto) continue;
-      (function paso() {
-        const m = mitad();
-        if (m > fila.clientWidth) {
-          if (!iniciado) { pos = dir < 0 ? m : 0; iniciado = true; }
-          if (!pausa) {
-            pos += dir * vel;
-            if (pos >= m) pos -= m;
-            if (pos <= 0) pos += m;
-            fila.scrollLeft = pos;
-          } else if (fila.scrollLeft >= m) { fila.scrollLeft -= m; }   // loop también al deslizar a mano
-          else if (fila.scrollLeft <= 0) { fila.scrollLeft += m; }
+      fila.addEventListener("pointerleave", e => { if (e.pointerType === "mouse" && !arrastre) seguir(300); });
+      fila.addEventListener("pointerdown", e => {
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        parar(); movido = false; arrastre = { x: e.clientX, pos };
+      });
+      addEventListener("pointermove", e => {
+        if (!arrastre) return;
+        const dx = e.clientX - arrastre.x;
+        if (Math.abs(dx) > 6) movido = true;
+        pos = arrastre.pos - dx;
+      });
+      const soltar = e => {
+        if (!arrastre) return;
+        arrastre = null;
+        seguir(e.pointerType === "mouse" ? 300 : 2500);
+      };
+      addEventListener("pointerup", soltar);
+      addEventListener("pointercancel", soltar);
+      fila.addEventListener("wheel", e => { if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) { pos += e.deltaX; parar(); seguir(1200); } }, { passive: true });
+      fila.querySelectorAll(".g-item").forEach(it => it.onclick = () => { if (!movido) openLightbox(lista, +it.dataset.k); });
+      fila.addEventListener("dragstart", e => e.preventDefault());
+
+      (function paso(t) {
+        const dt = Math.min(64, (t || performance.now()) - ultimo); ultimo = t || performance.now();
+        const m = track.scrollWidth / 2;
+        if (m > 0) {
+          if (!pausa) pos += dir * vel * dt / 16.7;      // misma velocidad aunque el celular vaya a 30 fps
+          pos = ((pos % m) + m) % m;                      // loop sin corte
+          track.style.transform = `translate3d(${-pos}px,0,0)`;
         }
         requestAnimationFrame(paso);
       })();
