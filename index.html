@@ -235,8 +235,37 @@
   .countdown { margin-top: 2rem; display: inline-flex; gap: .8rem; align-items: baseline; border: 1px solid var(--ink); padding: .9rem 1.2rem; }
   .countdown strong { font-size: 2rem; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
 
+  /* ---------- Galería: todas las fotos ---------- */
+  .galeria { background: #111; color: #f4f3ef; padding: clamp(4rem, 10vw, 7rem) 0 clamp(3rem, 7vw, 5rem); }
+  .g-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
+  .g-head h2 { font-size: clamp(2.2rem, 6vw, 4.5rem); font-weight: 800; letter-spacing: -.05em; line-height: .95; }
+  .g-head .dot { color: var(--accent); }
+  .galeria .label { color: #8d8c86; }
+  .filas {
+    display: grid; gap: 10px; margin-top: clamp(2rem, 5vw, 3.5rem);
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+            mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+  }
+  .fila { overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
+  .fila::-webkit-scrollbar { display: none; }
+  .fila-track { display: flex; gap: 10px; width: max-content; }
+  .g-item {
+    position: relative; flex: none; height: clamp(140px, 21vw, 250px); min-width: 110px;
+    border-radius: 4px; overflow: hidden; background: #1e1e1c; cursor: zoom-in;
+  }
+  .g-item img { height: 100%; width: auto; display: block; opacity: 0; transition: opacity .6s, transform .6s cubic-bezier(.2,.7,.2,1); }
+  .g-item img.ok { opacity: 1; }
+  .g-item:hover img { transform: scale(1.05); }
+  .g-item span {
+    position: absolute; left: 8px; bottom: 8px; padding: 3px 7px; border-radius: 99px;
+    background: rgba(0,0,0,.6); color: #fff; font-family: var(--mono); font-size: .65rem; letter-spacing: .06em;
+    opacity: 0; transition: opacity .25s;
+  }
+  .g-item:hover span { opacity: 1; }
+  .g-pie { margin-top: 1.6rem; }
+
   /* ---------- Cierre ---------- */
-  .cierre { border-top: 1px solid var(--ink); padding: clamp(4rem, 12vw, 10rem) 0 3rem; }
+  .cierre { border-top: 1px solid var(--ink); padding-top: clamp(4rem, 12vw, 10rem); padding-bottom: 3rem; }
   .cierre h2 { font-size: clamp(2rem, 4.5vw, 3.6rem); font-weight: 700; letter-spacing: -.05em; line-height: .95; max-width: 14ch; }
   .cierre-foot { display: flex; justify-content: space-between; margin-top: clamp(3rem, 8vw, 6rem); }
   .salir { font-family: var(--mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
@@ -310,6 +339,15 @@
 </header>
 
 <main class="wrap" id="timeline"></main>
+
+<section class="galeria" id="galeria" aria-label="Todas las fotos">
+  <div class="wrap g-head">
+    <h2>Todas las fotos<span class="dot">.</span></h2>
+    <span class="label" id="gCuenta"></span>
+  </div>
+  <div class="filas" id="filas"></div>
+  <div class="wrap g-pie"><span class="label">Desliza, pausa o toca una foto para verla en grande</span></div>
+</section>
 
 <footer class="wrap cierre">
   <h2 id="cierre" class="reveal"></h2>
@@ -524,6 +562,8 @@
     }), { rootMargin: "1000px 0px" });
     document.querySelectorAll(".carrusel").forEach(c => ioFotos.observe(c));
 
+    galeria(H);
+
   }
 
   // Al recargar, partir siempre desde arriba (y sin el #hito-N de la URL)
@@ -574,6 +614,70 @@
       update();
     }
     return c;
+  }
+
+  // ================= GALERÍA: todas las fotos en filas que se mueven solas =================
+  function galeria(H) {
+    const todas = [];
+    H.hitos.forEach(h => (h.fotos || []).forEach(src => todas.push({ src, anio: h.fecha })));
+    if (!todas.length) return $("galeria").remove();
+    const lista = todas.map(f => f.src);
+    const anios = [...new Set(todas.map(f => f.anio))];
+    $("gCuenta").textContent = `${todas.length} fotos · ${anios[0]} → ${anios[anios.length - 1]}`;
+
+    // Repartir en 3 filas intercaladas; cada fila va duplicada para que el loop no tenga corte
+    const N = 3, filas = $("filas");
+    const quieto = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    for (let r = 0; r < N; r++) {
+      const items = todas.map((f, k) => [f, k]).filter(([, k]) => k % N === r);
+      const fila = document.createElement("div");
+      fila.className = "fila";
+      const tile = ([f, k]) => `<div class="g-item" data-k="${k}"><img data-src="${esc(f.src)}" alt="" decoding="async"><span>${esc(f.anio)}</span></div>`;
+      fila.innerHTML = `<div class="fila-track">${items.map(tile).join("")}${items.map(tile).join("")}</div>`;
+      fila.querySelectorAll(".g-item").forEach(it => it.onclick = () => openLightbox(lista, +it.dataset.k));
+      filas.appendChild(fila);
+
+      // Movimiento: fila del medio al revés. Se pausa con el mouse encima o al tocar.
+      const dir = r % 2 ? -1 : 1, vel = 0.35 + r * 0.07;
+      let pos = 0, pausa = false, reanudar = null, iniciado = false;
+      const mitad = () => fila.scrollWidth / 2;
+      const parar = () => { pausa = true; clearTimeout(reanudar); };
+      const seguir = (ms) => { clearTimeout(reanudar); reanudar = setTimeout(() => { pos = fila.scrollLeft; pausa = false; }, ms); };
+      fila.addEventListener("pointerenter", e => { if (e.pointerType === "mouse") parar(); });
+      fila.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") seguir(300); });
+      fila.addEventListener("touchstart", parar, { passive: true });
+      fila.addEventListener("touchend", () => seguir(2500), { passive: true });
+      fila.addEventListener("wheel", () => { parar(); seguir(1500); }, { passive: true });
+      if (quieto) continue;
+      (function paso() {
+        const m = mitad();
+        if (m > fila.clientWidth) {
+          if (!iniciado) { pos = dir < 0 ? m : 0; iniciado = true; }
+          if (!pausa) {
+            pos += dir * vel;
+            if (pos >= m) pos -= m;
+            if (pos <= 0) pos += m;
+            fila.scrollLeft = pos;
+          } else if (fila.scrollLeft >= m) { fila.scrollLeft -= m; }   // loop también al deslizar a mano
+          else if (fila.scrollLeft <= 0) { fila.scrollLeft += m; }
+        }
+        requestAnimationFrame(paso);
+      })();
+    }
+
+    // Las fotos se desencriptan cuando la galería se acerca a la pantalla
+    const io = new IntersectionObserver(es => {
+      if (!es.some(e => e.isIntersecting)) return;
+      io.disconnect();
+      filas.querySelectorAll("img[data-src]").forEach(img => {
+        fotoURL(img.dataset.src).then(url => {
+          img.onload = () => { img.classList.add("ok"); img.parentElement.style.minWidth = "0"; };
+          img.src = url;
+        }).catch(() => {});
+        img.removeAttribute("data-src");
+      });
+    }, { rootMargin: "1200px 0px" });
+    io.observe($("galeria"));
   }
 
   // Barra de progreso
